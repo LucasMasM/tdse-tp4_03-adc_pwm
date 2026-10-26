@@ -82,25 +82,25 @@ void task_pwm_update(void *parameters)
 {
 
 	static uint16_t period=PERIOD;
-	static int16_t step = STEP;
 
 	shared_data_type *shared_data = (shared_data_type *) parameters;
 
-	if ( shared_data->adc_end_of_conversion ) {
-		shared_data->adc_end_of_conversion = false;
-		setPWM(htim3, TIM_CHANNEL_1, period, shared_data->pwm_active);
-		if ( step>0 ) {
-			if ( period-step<=shared_data->pwm_active ) {
-				step = step * -1;
-			}
+		if ( shared_data->adc_end_of_conversion ) {
+			// Bajamos la bandera del ADC
+			shared_data->adc_end_of_conversion = false;
+
+			/*
+			 * El ADC de 12 bits entrega valores entre 0 y 4095.
+			 * El periodo del PWM es 65535.
+			 * Realizamos un mapeo lineal (regla de tres) para adaptar
+			 * el valor leído al ciclo de trabajo del PWM.
+			 */
+			uint32_t adc_max = 4095;
+			shared_data->pwm_active = (uint16_t)(((uint32_t)shared_data->adc_value * period) / adc_max);
+
+			// Actualizamos el PWM con el nuevo valor proporcional al potenciómetro
+			setPWM(htim3, TIM_CHANNEL_1, period, shared_data->pwm_active);
 		}
-		else {
-			if ( abs(step)>=shared_data->pwm_active ) {
-				step = step * -1;
-			}
-		}
-		shared_data->pwm_active = shared_data->pwm_active + step;
-	}
 }
 
 
